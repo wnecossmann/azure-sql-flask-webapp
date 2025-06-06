@@ -93,7 +93,7 @@
         <thead>
           <tr>
             <th>PersonID</th>
-            <th>Geburtsdatum</th>
+            <th>Geburtstag</th>
             <th>Beruf</th>
             <th>Mail</th>
             <th>Telefon</th>
@@ -129,12 +129,13 @@
           // Neue Werte holen:
           const inputs = tr.querySelectorAll('input');
           const payload = {
-            PersonID: row.PersonID,
-            Geburtsdatum: inputs[0] ? inputs[0].value : "",
-            Beruf: inputs[1] ? inputs[1].value : "",
-            Mail: inputs[2] ? inputs[2].value : "",
-            Telefon: inputs[3] ? inputs[3].value : ""
-          };
+  PersonID: row.PersonID,
+  Geburtstag: inputs[0] ? inputs[0].value : "",
+  Beruf: inputs[1] ? inputs[1].value : "",
+  Mail: inputs[2] ? inputs[2].value : "",
+  Telefon: inputs[3] ? inputs[3].value : ""
+};
+
           const resp = await fetch('/api/update_person', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -167,7 +168,7 @@
           data.forEach(row => {
             const tr = document.createElement('tr');
             tr.appendChild(createCell(row, 'PersonID')); // nicht editierbar
-            tr.appendChild(createCell(row, 'Geburtsdatum', true));
+            tr.appendChild(createCell(row, 'Geburtstag', true));
             tr.appendChild(createCell(row, 'Beruf', true));
             tr.appendChild(createCell(row, 'Mail', true));
             tr.appendChild(createCell(row, 'Telefon', true));
