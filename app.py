@@ -37,21 +37,22 @@ from flask import request
 def update_person():
     data = request.get_json()
     person_id = data.get('PersonID')
-    # Passe hier die Felder an, die du bearbeiten möchtest:
-    name = data.get('Name')
+    geburtsdatum = data.get('Geburtsdatum')
     beruf = data.get('Beruf')
     mail = data.get('Mail')
     telefon = data.get('Telefon')
-
-    conn = get_conn()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE Person
-        SET Name = ?, Beruf = ?, Mail = ?, Telefon = ?
-        WHERE PersonID = ?
-    """, (name, beruf, mail, telefon, person_id))
-    conn.commit()
-    return jsonify({'status': 'success'})
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Person
+            SET Geburtsdatum = ?, Beruf = ?, Mail = ?, Telefon = ?
+            WHERE PersonID = ?
+        """, (geburtsdatum, beruf, mail, telefon, person_id))
+        conn.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
