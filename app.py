@@ -37,7 +37,7 @@ from flask import request
 def update_person():
     data = request.get_json()
     person_id = data.get('PersonID')
-    geburtsdatum = data.get('Geburtsdatum')
+    geburtstag = data.get('Geburtstag')
     beruf = data.get('Beruf')
     mail = data.get('Mail')
     telefon = data.get('Telefon')
@@ -46,13 +46,14 @@ def update_person():
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE Person
-            SET Geburtsdatum = ?, Beruf = ?, Mail = ?, Telefon = ?
+            SET Geburtstag = ?, Beruf = ?, Mail = ?, Telefon = ?
             WHERE PersonID = ?
-        """, (geburtsdatum, beruf, mail, telefon, person_id))
+        """, (geburtstag, beruf, mail, telefon, person_id))
         conn.commit()
         return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'status': 'error', 'error': str(e)}), 400
+
 
 if __name__ == '__main__':
     app.run(debug=True)
