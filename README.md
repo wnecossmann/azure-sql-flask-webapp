@@ -1,13 +1,6 @@
-# Schnellstart: Azure SQL → Python Flask → Website
+# Azure SQL → Python Flask → Website
 
 ## Voraussetzungen
-- Python 3.9 oder neuer
-- ODBC Driver 18 for SQL Server installiert
+- Python 3.9 oder neuer inkl. Flask und ODBC
 - Zugangsdaten zur Azure SQL-Datenbank
-- bla bla
 
----
-
-## 1. Lokale Einrichtung
-
-**Projektstruktur:**
