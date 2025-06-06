@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Daten aus Azure SQL</title>
+</head>
+<body>
+    <h1>Daten aus Tabelle "Person"</h1>
+    <ul id="daten"></ul>
+
+    <script>
+      fetch('/api/daten')
+        .then(r => r.json())
+        .then(data => {
+          const ul = document.getElementById('daten');
+          data.forEach(row => {
+            const li = document.createElement('li');
+            li.textContent = JSON.stringify(row);
+            ul.appendChild(li);
+          });
+        })
+        .catch(err => {
+          document.getElementById('daten').innerHTML = "Fehler beim Laden der Daten.";
+        });
+    </script>
+</body>
+</html>
