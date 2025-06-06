@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__, static_folder='static')
 
-DB_SERVER = 'wne.database.windows.net'
+DB_SERVER = 'wne-test.database.windows.net'
 DB_NAME = 'inadb'
 DB_USER = 'nimda'
 DB_PASSWORD = os.environ.get("INADB_PASSWORD", "wNe2018!")
@@ -22,7 +22,7 @@ def get_conn():
 def daten():
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT TOP 10 * FROM Person")  # Tabelle Person
+    cursor.execute("SELECT TOP 15 * FROM Person")  # Tabelle Person
     columns = [col[0] for col in cursor.description]
     rows = cursor.fetchall()
     result = [dict(zip(columns, row)) for row in rows]
