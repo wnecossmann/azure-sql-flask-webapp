@@ -2,25 +2,106 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Daten aus Azure SQL</title>
+    <title>Personen aus Azure SQL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: #f4f7fa;
+        margin: 0;
+        padding: 0;
+      }
+      h1 {
+        text-align: center;
+        margin-top: 32px;
+        color: #23426e;
+        letter-spacing: 1px;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 32px auto 0 auto;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 16px rgba(36,64,100,0.09);
+        padding: 28px 24px 18px 24px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 1rem;
+        margin: 0;
+      }
+      th, td {
+        padding: 8px 6px;
+        text-align: left;
+      }
+      th {
+        background: #e2ecfa;
+        color: #23426e;
+        font-weight: bold;
+        border-bottom: 2px solid #bfd3f3;
+      }
+      tr:nth-child(even) {
+        background: #f7fbff;
+      }
+      tr:hover {
+        background: #e8f2fb;
+      }
+      @media (max-width: 700px) {
+        .container { padding: 12px 2px; }
+        table, thead, tbody, th, td, tr { display: block; }
+        th { display: none; }
+        tr { margin-bottom: 15px; border-bottom: 1px solid #ccc;}
+        td { position: relative; padding-left: 52%; min-height: 40px; }
+        td:before {
+          position: absolute; left: 12px; width: 45%; white-space: nowrap;
+          color: #4978b8; font-weight: bold;
+        }
+        td[data-label]:before { content: attr(data-label) ": "; }
+      }
+    </style>
 </head>
 <body>
-    <h1>Daten aus Tabelle "Person"</h1>
-    <ul id="daten"></ul>
-
+    <h1>Personen (Azure SQL Demo)</h1>
+    <div class="container">
+      <table id="daten">
+        <thead>
+          <tr>
+            <th>PersonID</th>
+            <th>Name</th>
+            <th>Geburtsdatum</th>
+            <th>Beruf</th>
+            <th>Mail</th>
+            <th>Telefon</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="status" style="color: #c20; margin-top: 20px;"></div>
+    </div>
     <script>
       fetch('/api/daten')
-        .then(r => r.json())
+        .then(response => response.json())
         .then(data => {
-          const ul = document.getElementById('daten');
+          const tbody = document.querySelector('#daten tbody');
+          if(!data.length) {
+            document.getElementById('status').textContent = "Keine Daten gefunden.";
+            return;
+          }
           data.forEach(row => {
-            const li = document.createElement('li');
-            li.textContent = JSON.stringify(row);
-            ul.appendChild(li);
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+              `<td data-label="PersonID">${row.PersonID ?? ""}</td>` +
+              `<td data-label="Name">${(row.Name || row.Nachname || row.Vorname) ?? ""}</td>` +
+              `<td data-label="Geburtsdatum">${row.Geburtsdatum ?? ""}</td>` +
+              `<td data-label="Beruf">${row.Beruf ?? ""}</td>` +
+              `<td data-label="Mail">${row.Mail ?? ""}</td>` +
+              `<td data-label="Telefon">${row.Telefon ?? ""}</td>`;
+            tbody.appendChild(tr);
           });
         })
         .catch(err => {
-          document.getElementById('daten').innerHTML = "Fehler beim Laden der Daten.";
+          document.getElementById('status').textContent = "Fehler beim Laden der Daten.";
         });
     </script>
 </body>
