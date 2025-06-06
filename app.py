@@ -31,6 +31,27 @@ def daten():
 @app.route('/')
 def index():
     return send_from_directory(app.static_folder, 'index.html')
+from flask import request
+
+@app.route('/api/update_person', methods=['POST'])
+def update_person():
+    data = request.get_json()
+    person_id = data.get('PersonID')
+    # Passe hier die Felder an, die du bearbeiten möchtest:
+    name = data.get('Name')
+    beruf = data.get('Beruf')
+    mail = data.get('Mail')
+    telefon = data.get('Telefon')
+
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE Person
+        SET Name = ?, Beruf = ?, Mail = ?, Telefon = ?
+        WHERE PersonID = ?
+    """, (name, beruf, mail, telefon, person_id))
+    conn.commit()
+    return jsonify({'status': 'success'})
 
 if __name__ == '__main__':
     app.run(debug=True)
