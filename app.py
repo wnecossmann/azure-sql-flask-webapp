@@ -94,5 +94,9 @@ def update_ausschuettung():
     except Exception as e:
         return jsonify({'status': 'error', 'error': str(e)}), 400
 
+@app.route('/ausschuettungen')
+def aussch_html():
+    return send_from_directory(app.static_folder, 'ausschuettungen.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
