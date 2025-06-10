@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Ausschüttungsverwaltung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body { font-family: 'Segoe UI', Arial; background: #f4f7fa; margin:0; padding:20px;}
+      .container { max-width:1000px; margin:auto; background:#fff; padding:20px; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.1);}
+      table {width:100%; border-collapse:collapse;}
+      th, td {padding:8px; border-bottom:1px solid #ddd;}
+      th {background:#4978b8; color:#fff;}
+      tr:hover {background:#f0f8ff;}
+      input {width:95%; padding:4px;}
+      button {padding:4px 10px; cursor:pointer;}
+    </style>
+</head>
+<body>
+<div class="container">
+  <h2>Ausschüttungsverwaltung</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Jahr</th>
+        <th>Ausschüttung (Soll)</th>
+        <th>Ausschüttung (tatsächlich)</th>
+        <th>Auszahlung (Datum)</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="daten"></tbody>
+  </table>
+</div>
+<script>
+fetch('/api/ausschuettungen').then(r=>r.json()).then(data=>{
+  const tbody=document.getElementById('daten');
+  data.forEach(r=>{
+    const tr=document.createElement('tr');
+    ['Jahr','AusschuettungSoll','Ausschuettung','Auszahlung'].forEach(f=>{
+      const td=document.createElement('td');
+      const inp=document.createElement('input');
+      inp.value=r[f]??'';
+      td.appendChild(inp);
+      tr.appendChild(td);
+    });
+    const tdBtn=document.createElement('td');
+    const btn=document.createElement('button');
+    btn.textContent='Speichern';
+    btn.onclick=async()=>{
+      btn.disabled=true;
+      const inputs=tr.querySelectorAll('input');
+      const payload={
+        ID:r.ID,
+        AusschuettungSoll:inputs[1].value,
+        Ausschuettung:inputs[2].value,
+        Auszahlung:inputs[3].value
+      };
+      const resp=await fetch('/api/update_ausschuettung',{
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+      });
+      const result=await resp.json();
+      btn.disabled=false;
+      alert(result.status==='success'?'Gespeichert!':'Fehler: '+result.error);
+    };
+    tdBtn.appendChild(btn); tr.appendChild(tdBtn); tbody.appendChild(tr);
+  });
+});
+</script>
+</body>
+</html>
