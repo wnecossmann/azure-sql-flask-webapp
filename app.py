@@ -24,7 +24,7 @@ def daten():
         SELECT p.PersonID, a.Name, a.Vorname, p.Geburtstag, p.Beruf, p.Mail, p.Telefon, 
                a.Straße, a.PLZ, a.Ort
         FROM Person p
-        INNER JOIN [Anschrift Person] ap ON p.PersonID = ap.PersonID
+        INNER JOIN [Anschrift_Person] ap ON p.PersonID = ap.PersonID
         INNER JOIN Anschrift a ON ap.AnschriftID = a.AnschriftID
     """)
     columns = [col[0] for col in cursor.description]
@@ -49,7 +49,7 @@ def update_person():
         cursor.execute("""
             UPDATE Anschrift SET Name=?, Vorname=?, Straße=?, PLZ=?, Ort=?
             WHERE AnschriftID=(
-                SELECT AnschriftID FROM [Anschrift Person] WHERE PersonID=?
+                SELECT AnschriftID FROM [Anschrift_Person] WHERE PersonID=?
             )
         """, (data.get('Name'), data.get('Vorname'), data.get('Straße'), data.get('PLZ'), data.get('Ort'), person_id))
 
