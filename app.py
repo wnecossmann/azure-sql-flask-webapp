@@ -62,5 +62,37 @@ def update_person():
 def index():
     return send_from_directory(app.static_folder, 'index.html')
 
+@app.route('/api/ausschuettungen')
+def ausschuettungen():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT fa.ID, j.Jahr, fa.AusschuettungSoll, fa.Ausschuettung, fa.Auszahlung
+        FROM Fonds_Ausschuettung fa
+        INNER JOIN Jahr j ON fa.JahrID = j.JahrID
+        ORDER BY j.Jahr DESC
+    """)
+    columns = [col[0] for col in cursor.description]
+    rows = cursor.fetchall()
+    result = [dict(zip(columns, row)) for row in rows]
+    return jsonify(result)
+
+@app.route('/api/update_ausschuettung', methods=['POST'])
+def update_ausschuettung():
+    data = request.get_json()
+    aussch_id = data.get('ID')
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Fonds_Ausschuettung
+            SET AusschuettungSoll=?, Ausschuettung=?, Auszahlung=?
+            WHERE ID=?
+        """, (data.get('AusschuettungSoll'), data.get('Ausschuettung'), data.get('Auszahlung'), aussch_id))
+        conn.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 400
+
 if __name__ == '__main__':
     app.run(debug=True)
