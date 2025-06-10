@@ -2,218 +2,71 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Personen aus Azure SQL</title>
+    <title>Personenverwaltung Azure SQL</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-      body {
-        font-family: 'Segoe UI', Arial, sans-serif;
-        background: #f4f7fa;
-        margin: 0;
-        padding: 0;
-      }
-      h1 {
-        text-align: center;
-        margin-top: 32px;
-        color: #23426e;
-        letter-spacing: 1px;
-      }
-      .container {
-        max-width: 1000px;
-        margin: 32px auto 0 auto;
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 2px 16px rgba(36,64,100,0.09);
-        padding: 28px 24px 18px 24px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 1rem;
-        margin: 0;
-      }
-      th, td {
-        padding: 8px 6px;
-        text-align: left;
-      }
-      th {
-        background: #e2ecfa;
-        color: #23426e;
-        font-weight: bold;
-        border-bottom: 2px solid #bfd3f3;
-      }
-      tr:nth-child(even) {
-        background: #f7fbff;
-      }
-      tr:hover {
-        background: #e8f2fb;
-      }
-      td input {
-        width: 96%;
-        font-size: 1rem;
-        padding: 2px 4px;
-        border: 1px solid #c4d2e8;
-        border-radius: 4px;
-      }
-      td input.changed {
-        border-color: #4978b8;
-        background: #f0faff;
-      }
-      button {
-        background: #4978b8;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        font-size: 1rem;
-        cursor: pointer;
-        padding: 5px 12px;
-        transition: background 0.2s;
-      }
-      button:disabled {
-        background: #ccc;
-        cursor: wait;
-      }
-      @media (max-width: 700px) {
-        .container { padding: 12px 2px; }
-        table, thead, tbody, th, td, tr { display: block; }
-        th { display: none; }
-        tr { margin-bottom: 15px; border-bottom: 1px solid #ccc;}
-        td { position: relative; padding-left: 52%; min-height: 40px; }
-        td:before {
-          position: absolute; left: 12px; width: 45%; white-space: nowrap;
-          color: #4978b8; font-weight: bold;
-        }
-        td[data-label]:before { content: attr(data-label) ": "; }
-      }
+      body { font-family: 'Segoe UI', Arial; background: #f4f7fa; margin:0; padding:20px;}
+      .container { max-width:1200px; margin:auto; background:#fff; padding:20px; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.1);}
+      table {width:100%; border-collapse:collapse;}
+      th, td {padding:8px; border-bottom:1px solid #ddd;}
+      th {background:#4978b8; color:#fff;}
+      tr:hover {background:#f0f8ff;}
+      input {width:95%; padding:4px;}
+      button {padding:4px 10px; cursor:pointer;}
     </style>
 </head>
 <body>
-    <h1>Personen (Azure SQL Demo)</h1>
-    <div class="container">
-      <table id="daten">
-        <thead>
-          <tr>
-            <th>PersonID</th>
-            <th>Geburtstag</th>
-            <th>Beruf</th>
-            <th>Mail</th>
-            <th>Telefon</th>
-            <th></th> <!-- Für "Speichern" Button -->
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div id="status" style="color: #c20; margin-top: 20px;"></div>
-    </div>
-    
-    <script>
-        
-function sqlDateToDE(dateStr) {
-    // Erwartetes Format: "YYYY-MM-DD..." oder "Sat, 17 Jan 1959 00:00:00 GMT"
-    if (!dateStr) return '';
-    // Versuche das Datum direkt zu parsen
-    let d = new Date(dateStr);
-    if (isNaN(d.getTime())) {
-        // Fallback: Versuche, nur den ersten Teil zu nehmen
-        let s = (dateStr + '').substring(0, 10);
-        d = new Date(s);
-        if (isNaN(d.getTime())) return dateStr;
-    }
-    // Format: tt.mm.jjjj
-    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
-}
-
-// Umwandlung von tt.mm.jjjj nach SQL (für Speichern)
-function deToSQLDate(dateStr) {
-    const parts = dateStr.split('.');
-    if (parts.length === 3) {
-        // yyyy-mm-dd
-        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-    }
-    return dateStr;
-}
-
-        
-function createCell(row, field, editable=false) {
-    const td = document.createElement('td');
-    if (editable) {
-        const input = document.createElement('input');
-        input.type = 'text';
-        // Besonderheit für Geburtstag
-        if (field === 'Geburtstag') {
-            input.value = sqlDateToDE(row[field]);
-        } else {
-            input.value = row[field] ?? '';
-        }
-        input.onchange = () => input.classList.add('changed');
-        td.appendChild(input);
-    } else {
-        td.textContent = row[field] ?? '';
-    }
-    return td;
-}
-
-      function addSaveButton(tr, row) {
-        const td = document.createElement('td');
-        const btn = document.createElement('button');
-        btn.textContent = "💾 Speichern";
-        btn.onclick = async () => {
-          btn.disabled = true;
-          btn.textContent = "Speichere...";
-          // Neue Werte holen:
-          const inputs = tr.querySelectorAll('input');
-          
-const payload = {
-    PersonID: row.PersonID,
-    Geburtstag: inputs[0] ? deToSQLDate(inputs[0].value) : "",
-    Beruf: inputs[1] ? inputs[1].value : "",
-    Mail: inputs[2] ? inputs[2].value : "",
-    Telefon: inputs[3] ? inputs[3].value : ""
-};
-
-
-          const resp = await fetch('/api/update_person', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          const json = await resp.json();
-          if (resp.ok && json.status === "success") {
-            btn.textContent = "Gespeichert!";
-            setTimeout(() => btn.textContent = "💾 Speichern", 1200);
-            inputs.forEach(i => i.classList.remove('changed'));
-          } else {
-            btn.textContent = "Fehler!";
-            if (json.error) alert("Fehler: " + json.error);
-            setTimeout(() => btn.textContent = "💾 Speichern", 2000);
-          }
-          btn.disabled = false;
-        };
-        td.appendChild(btn);
+<div class="container">
+  <h2>Personenverwaltung</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Vorname</th><th>Geburtstag</th><th>Beruf</th><th>Mail</th><th>Telefon</th><th>Straße</th><th>PLZ</th><th>Ort</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="daten"></tbody>
+  </table>
+</div>
+<script>
+  function sqlDateToDE(d){
+    const date = new Date(d);
+    return `${String(date.getDate()).padStart(2,'0')}.${String(date.getMonth()+1).padStart(2,'0')}.${date.getFullYear()}`;
+  }
+  function deToSQLDate(d){
+    const [day, month, year]=d.split('.');
+    return `${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
+  }
+  fetch('/api/daten').then(r=>r.json()).then(data=>{
+    const tbody=document.getElementById('daten');
+    data.forEach(r=>{
+      const tr=document.createElement('tr');
+      ['Name','Vorname','Geburtstag','Beruf','Mail','Telefon','Straße','PLZ','Ort'].forEach((f,i)=>{
+        const td=document.createElement('td');
+        const inp=document.createElement('input');
+        inp.value=f==='Geburtstag'?sqlDateToDE(r[f]):(r[f]??'');
+        td.appendChild(inp);
         tr.appendChild(td);
-      }
-
-      fetch('/api/daten')
-        .then(response => response.json())
-        .then(data => {
-          const tbody = document.querySelector('#daten tbody');
-          if(!data.length) {
-            document.getElementById('status').textContent = "Keine Daten gefunden.";
-            return;
-          }
-          data.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.appendChild(createCell(row, 'PersonID')); // nicht editierbar
-            tr.appendChild(createCell(row, 'Geburtstag', true));
-            tr.appendChild(createCell(row, 'Beruf', true));
-            tr.appendChild(createCell(row, 'Mail', true));
-            tr.appendChild(createCell(row, 'Telefon', true));
-            addSaveButton(tr, row);
-            tbody.appendChild(tr);
-          });
-        })
-        .catch(err => {
-          document.getElementById('status').textContent = "Fehler beim Laden der Daten.";
+      });
+      const tdBtn=document.createElement('td');
+      const btn=document.createElement('button');
+      btn.textContent='Speichern';
+      btn.onclick=async()=>{
+        btn.disabled=true;
+        const inputs=tr.querySelectorAll('input');
+        const payload={PersonID:r.PersonID};
+        ['Name','Vorname','Geburtstag','Beruf','Mail','Telefon','Straße','PLZ','Ort'].forEach((f,i)=>{
+          payload[f]=f==='Geburtstag'?deToSQLDate(inputs[i].value):inputs[i].value;
         });
-    </script>
+        const resp=await fetch('/api/update_person',{
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+        });
+        const result=await resp.json();
+        btn.disabled=false;
+        alert(result.status==='success'?'Gespeichert!':'Fehler: '+result.error);
+      };
+      tdBtn.appendChild(btn); tr.appendChild(tdBtn); tbody.appendChild(tr);
+    });
+  });
+</script>
 </body>
 </html>
