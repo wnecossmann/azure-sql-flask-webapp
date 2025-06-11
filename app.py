@@ -147,7 +147,169 @@ def fonds_html():
     return send_from_directory(app.static_folder, 'fonds.html')
 
 
+# ---------- Stammdaten für Auswahlfelder ----------
 
+@app.route('/api/standorte')
+def standorte():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT StandortID, Bezeichnung FROM Standort ORDER BY Bezeichnung")
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+@app.route('/api/jahre')
+def jahre():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT JahrID, Jahr FROM Jahr ORDER BY Jahr DESC")
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+@app.route('/api/monate')
+def monate():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT MonatID, Monat FROM Monat ORDER BY MonatID")
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+@app.route('/api/weas/<int:standort_id>')
+def weas_by_standort(standort_id):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT w.WEAID, w.Bezeichnung 
+        FROM WEA w
+        INNER JOIN WEA_Standort ws ON ws.WEAID = w.WEAID
+        WHERE ws.StandortID = ?
+        ORDER BY w.Bezeichnung
+    """, (standort_id,))
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+# ---------- Betriebsdaten Standort (nur kWh_EVU) ----------
+
+@app.route("/api/standort_betriebsdaten", methods=["GET", "POST"])
+def standort_betriebsdaten():
+    if request.method == "GET":
+        standort_id = request.args.get("standort_id")
+        jahr_id = request.args.get("jahr_id")
+        monat_id = request.args.get("monat_id")
+        if not (standort_id and jahr_id and monat_id):
+            return jsonify({})
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT Standort_BetriebsdatenID, kWh_EVU
+            FROM Standort_Betriebsdaten
+            WHERE StandortID = ? AND JahrID = ? AND MonatID = ?
+        """, (standort_id, jahr_id, monat_id))
+        row = cur.fetchone()
+        if row:
+            return jsonify({"Standort_BetriebsdatenID": row[0], "kWh_EVU": row[1]})
+        else:
+            return jsonify({})
+    elif request.method == "POST":
+        data = request.get_json()
+        standort_id = data["StandortID"]
+        jahr_id = data["JahrID"]
+        monat_id = data["MonatID"]
+        kwh_evu = data.get("kWh_EVU")
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT Standort_BetriebsdatenID
+            FROM Standort_Betriebsdaten
+            WHERE StandortID = ? AND JahrID = ? AND MonatID = ?
+        """, (standort_id, jahr_id, monat_id))
+        row = cur.fetchone()
+        if row:
+            cur.execute("""
+                UPDATE Standort_Betriebsdaten SET kWh_EVU = ?
+                WHERE Standort_BetriebsdatenID = ?
+            """, (kwh_evu, row[0]))
+        else:
+            cur.execute("""
+                INSERT INTO Standort_Betriebsdaten (StandortID, JahrID, MonatID, kWh_EVU)
+                VALUES (?, ?, ?, ?)
+            """, (standort_id, jahr_id, monat_id, kwh_evu))
+        conn.commit()
+        return jsonify({"status": "success"})
+
+# ---------- Betriebsdaten pro WEA (BDEWEA) ----------
+
+@app.route('/api/bdewea', methods=['GET', 'POST'])
+def bdewea():
+    if request.method == "GET":
+        # Optional: Filter nach Standort/Jahr/Monat?
+        standort_id = request.args.get('standort_id')
+        jahr_id = request.args.get('jahr_id')
+        monat_id = request.args.get('monat_id')
+        conn = get_conn()
+        cursor = conn.cursor()
+        query = """
+            SELECT b.BDEID, w.WEAID, w.Bezeichnung AS WEA, b.AnlagenMessung, b.geeichteMessung, b.Verfügbarkeit, b.Windmittel, b.Bemerkungen
+            FROM BDEWEA b
+            INNER JOIN WEA w ON w.WEAID = b.WEAID
+            INNER JOIN WEA_Standort ws ON ws.WEAID = w.WEAID
+            WHERE 1=1
+        """
+        params = []
+        if standort_id:
+            query += " AND ws.StandortID = ?"
+            params.append(standort_id)
+        if jahr_id:
+            query += " AND b.JahrID = ?"
+            params.append(jahr_id)
+        if monat_id:
+            query += " AND b.MonatID = ?"
+            params.append(monat_id)
+        query += " ORDER BY w.Bezeichnung"
+        cursor.execute(query, tuple(params))
+        columns = [c[0] for c in cursor.description]
+        return jsonify([dict(zip(columns, row)) for row in cursor.fetchall()])
+    elif request.method == "POST":
+        data = request.get_json()
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT BDEID FROM BDEWEA WHERE WEAID=? AND JahrID=? AND MonatID=?
+        """, (data['WEAID'], data['JahrID'], data['MonatID']))
+        row = cursor.fetchone()
+        if row:
+            cursor.execute("""
+                UPDATE BDEWEA SET AnlagenMessung=?, geeichteMessung=?, Verfügbarkeit=?, Windmittel=?, Bemerkungen=?
+                WHERE BDEID=?
+            """, (
+                data.get('AnlagenMessung'),
+                data.get('geeichteMessung'),
+                data.get('Verfügbarkeit'),
+                data.get('Windmittel'),
+                data.get('Bemerkungen'),
+                row[0]
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO BDEWEA (WEAID, JahrID, MonatID, AnlagenMessung, geeichteMessung, Verfügbarkeit, Windmittel, Bemerkungen)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                data['WEAID'],
+                data['JahrID'],
+                data['MonatID'],
+                data.get('AnlagenMessung'),
+                data.get('geeichteMessung'),
+                data.get('Verfügbarkeit'),
+                data.get('Windmittel'),
+                data.get('Bemerkungen'),
+            ))
+        conn.commit()
+        return jsonify({'status': 'success'})
+
+# ---------- HTML für Frontend ----------
+
+@app.route('/standort_betriebsdaten')
+def html_standort_betriebsdaten():
+    return send_from_directory(app.static_folder, 'standort_betriebsdaten.html')
+
+@app.route('/bdewea')
+def html_bdewea():
+    return send_from_directory(app.static_folder, 'bdewea.html')
 
 
 if __name__ == '__main__':
