@@ -98,5 +98,32 @@ def update_ausschuettung():
 def aussch_html():
     return send_from_directory(app.static_folder, 'ausschuettungen.html')
 
+@app.route('/api/komplementaere')
+def komplementaere():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT Name FROM Komplementär ORDER BY Name")
+    result = [row[0] for row in cursor.fetchall()]
+    return jsonify(result)
+
+@app.route('/api/ausschuettungen/<komplementaer>')
+def aussch_by_komplementaer(komplementaer):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT j.Jahr, fa.AusschuettungSoll, fa.Ausschuettung, fa.Auszahlung
+        FROM Fonds_Ausschuettung fa
+        INNER JOIN Jahr j ON fa.JahrID = j.JahrID
+        INNER JOIN Fonds f ON fa.FondsID = f.FondsID
+        INNER JOIN [Fonds Komplementär] fk ON f.FondsID = fk.FondsID
+        INNER JOIN Komplementär k ON fk.KomplementärID = k.KomplementärID
+        WHERE k.Name=?
+        ORDER BY j.Jahr DESC
+    """, (komplementaer,))
+    columns = [col[0] for col in cursor.description]
+    rows = cursor.fetchall()
+    result = [dict(zip(columns, row)) for row in rows]
+    return jsonify(result)
+
 if __name__ == '__main__':
     app.run(debug=True)
