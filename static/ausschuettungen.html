@@ -3,78 +3,89 @@
 <head>
   <meta charset="UTF-8">
   <title>Ausschüttungsverwaltung</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { font-family: Arial, sans-serif; background: #eef5fc; }
-    .container { width: 90%; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 8px; border-bottom: 1px solid #ddd; }
-    th { background: #4a8fcf; color: white; }
-    .green { color: green; }
-    .red { color: red; }
-    select, button { padding: 6px; margin: 5px 0; }
+    .container { width: 95%; max-width:1200px; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 3px 15px rgba(0,0,0,0.1); }
+    table { width:100%; border-collapse: collapse; }
+    th, td { padding:8px; text-align:left; border-bottom: 1px solid #ddd; }
+    th { background:#4978b8; color:white; }
+    tfoot td { font-weight: bold; background: #f0f4fc; }
+    .green { color:green; }
+    .red { color:red; }
+    select, button { padding:8px; margin:5px 0; border-radius:5px; }
   </style>
 </head>
 <body>
 <div class="container">
   <h2>Ausschüttungsverwaltung</h2>
-  Gesellschaft:
-  <select id="komplementaer">
-    <option value="">--Auswählen--</option>
-  </select>
+  <label>Gesellschaft:
+    <select id="komplementaer">
+      <option>--Auswählen--</option>
+    </select>
+  </label>
   <button onclick="exportCSV()">Export CSV</button>
-  <table id="table">
+  <table>
     <thead>
-      <tr><th>Jahr</th><th>Geplant (%)</th><th>Ist (%)</th><th>Auszahlung</th><th>Δ</th></tr>
+      <tr><th>Jahr</th><th>Geplant (%)</th><th>Ist (%)</th><th>Auszahlung</th><th>Differenz</th></tr>
     </thead>
     <tbody id="data"></tbody>
-    <tfoot><tr><td>Summe</td><td id="sumSoll">0</td><td id="sumIst">0</td><td colspan="2"></td></tr></tfoot>
+    <tfoot>
+      <tr><td>Summe</td><td id="sumSoll">0,00 %</td><td id="sumIst">0,00 %</td><td colspan="2"></td></tr>
+    </tfoot>
   </table>
 </div>
 <script>
-  const sel = document.getElementById('komplementaer');
-  fetch('/api/komplementaere').then(r=>r.json()).then(d=> {
-    d.forEach(k=> sel.innerHTML+=`<option>${k}</option>`);
+const sel = document.getElementById('komplementaer');
+fetch('/api/komplementaere').then(r=>r.json()).then(d=>{
+  sel.innerHTML += d.map(k=>`<option>${k}</option>`).join('');
+});
+
+sel.onchange=()=>{
+  fetch('/api/ausschuettungen/'+encodeURIComponent(sel.value)).then(r=>r.json()).then(d=>{
+    let html='', sumSoll=0, sumIst=0;
+    d.forEach(i=>{
+      const soll = parseFloat(i.AusschuettungSoll || 0);
+      const ist = parseFloat(i.Ausschuettung || 0);
+      const diff = ist - soll;
+      sumSoll += soll;
+      sumIst += ist;
+
+      const auszahlung = i.Auszahlung && new Date(i.Auszahlung).getFullYear() > 1971
+        ? new Date(i.Auszahlung).toLocaleDateString('de-DE') : '';
+
+      html += `<tr>
+        <td>${i.Jahr}</td>
+        <td>${soll.toFixed(2).replace('.', ',')} %</td>
+        <td>${ist.toFixed(2).replace('.', ',')} %</td>
+        <td>${auszahlung}</td>
+        <td class="${diff >= 0 ? 'green' : 'red'}">${diff.toFixed(2).replace('.', ',')} %</td>
+      </tr>`;
+    });
+
+    document.getElementById('data').innerHTML = html;
+    document.getElementById('sumSoll').innerText = sumSoll.toFixed(2).replace('.', ',') + ' %';
+    document.getElementById('sumIst').innerText = sumIst.toFixed(2).replace('.', ',') + ' %';
   });
+};
 
-  sel.onchange=()=>{
-    fetch('/api/ausschuettungen/'+sel.value).then(r=>r.json()).then(d=> {
-      let html='', sumSoll=0, sumIst=0;
-      d.forEach(i=>{
-        const diff=i.Ausschuettung-i.AusschuettungSoll;
-        sumSoll+=i.AusschuettungSoll;
-        sumIst+=i.Ausschuettung;
-        const farbe=diff>=0?'green':'red';
-        html+=`<tr>
-          <td>${i.Jahr}</td>
-          <td>${i.AusschuettungSoll}</td>
-          <td>${i.Ausschuettung}</td>
-          <td>${new Date(i.Auszahlung).toLocaleDateString('de-DE')}</td>
-          <td class="${farbe}">${diff}</td>
-        </tr>`;
-      });
-      document.getElementById('data').innerHTML=html;
-      document.getElementById('sumSoll').innerText=sumSoll;
-      document.getElementById('sumIst').innerText=sumIst;
-    });
-  };
-
-  function exportCSV(){
-    const rows=[["Jahr","Geplant","Ist","Auszahlung","Differenz"]];
-    document.querySelectorAll("#data tr").forEach(tr=>{
-      const row=[];
-      tr.querySelectorAll("td").forEach(td=>row.push(td.innerText));
-      rows.push(row);
-    });
-    let csv=rows.map(e=>e.join(";")).join("\n");
-    let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
-    let url=URL.createObjectURL(blob);
-    let a=document.createElement("a");
-    a.href=url;
-    a.download="ausschuettungen.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
+function exportCSV(){
+  const rows=[["Jahr","Geplant","Ist","Auszahlung","Differenz"]];
+  document.querySelectorAll("#data tr").forEach(tr=>{
+    const row=[];
+    tr.querySelectorAll("td").forEach(td=>row.push(td.innerText));
+    rows.push(row);
+  });
+  const csv=rows.map(e=>e.join(";")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="ausschuettungen.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 </script>
 </body>
 </html>
