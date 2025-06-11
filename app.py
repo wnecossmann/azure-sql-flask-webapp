@@ -125,6 +125,10 @@ def aussch_by_komplementaer(komplementaer):
     result = [dict(zip(columns, row)) for row in rows]
     return jsonify(result)
 
+@app.route('/personen')
+def personen_html():
+    return send_from_directory(app.static_folder, 'person.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
