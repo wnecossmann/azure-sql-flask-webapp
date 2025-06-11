@@ -1,0 +1,84 @@
+<!-- betriebsdaten.html -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Betriebsdatenerfassung</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #e9edf5; margin: 0; }
+    .card { max-width: 800px; margin: 2em auto; background: rgba(255,255,255,0.8); box-shadow: 0 8px 24px #b2bedf30; border-radius: 20px; padding: 2em; }
+    h2 { font-size: 2rem; letter-spacing: .01em; text-align: center; }
+    label, select, input { font-size: 1em; }
+    form { display: flex; gap: 1em; margin-bottom: 2em; flex-wrap: wrap; align-items: center;}
+    input, select { border: 1px solid #b2bedf; border-radius: 8px; padding: .4em .8em; background: #f9faff; }
+    button { border: none; background: #5376e6; color: white; border-radius: 8px; padding: .5em 1.2em; cursor: pointer; font-weight: 600;}
+    table { width: 100%; border-collapse: collapse; margin-top: 1em;}
+    th, td { padding: .5em 1em; }
+    th { background: #5376e6; color: white; }
+    tr:nth-child(even) { background: #f4f7fc; }
+    @media (max-width: 700px) {
+      form, table, .card { font-size: 0.95em; padding: 1em; }
+      table, th, td { font-size: 0.9em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Betriebsdatenerfassung</h2>
+    <label for="weaSel">WEA:</label>
+    <select id="weaSel"></select>
+    <form id="datForm">
+      <input type="date" id="datum" required>
+      <input type="number" id="ertrag" step="0.01" placeholder="Ertrag (kWh)" required>
+      <input type="number" id="stunden" step="0.01" placeholder="Betriebsstunden">
+      <input type="text" id="stoerung" placeholder="Störung (optional)">
+      <button>Speichern</button>
+    </form>
+    <table id="bdTabelle">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Ertrag (kWh)</th>
+          <th>Betriebsstunden</th>
+          <th>Störung</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+<script>
+async function ladeWEAs() {
+  let res = await fetch('/api/weas'); let weas = await res.json();
+  let sel = document.getElementById('weaSel');
+  sel.innerHTML = weas.map(w => `<option value="${w.WEAID}">${w.Bezeichnung}</option>`).join('');
+  if (weas.length) ladeTabelle(weas[0].WEAID);
+  sel.onchange = e => ladeTabelle(e.target.value);
+}
+async function ladeTabelle(weaid) {
+  let res = await fetch(`/api/betriebsdaten/${weaid}`); let daten = await res.json();
+  let tbody = document.querySelector('#bdTabelle tbody');
+  tbody.innerHTML = daten.map(row =>
+    `<tr>
+      <td>${row.Datum.split('T')[0].split('-').reverse().join('.')}</td>
+      <td>${row.Ertrag_kWh?.toLocaleString('de-DE', {minimumFractionDigits:2}) || ''}</td>
+      <td>${row.Betriebsstunden ?? ''}</td>
+      <td>${row.Stoerung || ''}</td>
+    </tr>`).join('');
+}
+document.getElementById('datForm').onsubmit = async e => {
+  e.preventDefault();
+  let weaid = document.getElementById('weaSel').value;
+  let body = {
+    WEAID: weaid,
+    Datum: document.getElementById('datum').value,
+    Ertrag_kWh: document.getElementById('ertrag').value,
+    Betriebsstunden: document.getElementById('stunden').value,
+    Stoerung: document.getElementById('stoerung').value
+  };
+  await fetch('/api/betriebsdaten', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  ladeTabelle(weaid);
+};
+ladeWEAs();
+</script>
+</body>
+</html>
