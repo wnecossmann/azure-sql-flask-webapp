@@ -182,6 +182,26 @@ def betriebsdaten_html():
 def fonds_html():
     return send_from_directory(app.static_folder, 'fonds.html')
 
+@app.route('/api/update_betriebsdaten', methods=['POST'])
+def update_betriebsdaten():
+    data = request.get_json()
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Standort_Betriebsdaten
+            SET KWh_EVU=?, Stromeigenverbrauch=?, Windmittel=?, Grundvergütung=?, SDLBonus=?, Kosten_Erlös_DV_Euro=?, Bemerkungen=?
+            WHERE Standort_BetriebsdatenID=?
+        """, (
+            data.get('KWh_EVU'), data.get('Stromeigenverbrauch'), data.get('Windmittel'),
+            data.get('Grundvergütung'), data.get('SDLBonus'), data.get('Kosten_Erlös_DV_Euro'), data.get('Bemerkungen'),
+            data.get('Standort_BetriebsdatenID')
+        ))
+        conn.commit()
+        return jsonify({'status':'success'})
+    except Exception as e:
+        return jsonify({'status':'error', 'error':str(e)}), 400
+
 
 if __name__ == '__main__':
     app.run(debug=True)
