@@ -1,70 +1,80 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <title>Ausschüttungsverwaltung</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-      body { font-family: 'Segoe UI', Arial; background: #f4f7fa; margin:0; padding:20px;}
-      .container { max-width:1000px; margin:auto; background:#fff; padding:20px; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.1);}
-      table {width:100%; border-collapse:collapse;}
-      th, td {padding:8px; border-bottom:1px solid #ddd;}
-      th {background:#4978b8; color:#fff;}
-      tr:hover {background:#f0f8ff;}
-      input {width:95%; padding:4px;}
-      button {padding:4px 10px; cursor:pointer;}
-    </style>
+  <meta charset="UTF-8">
+  <title>Ausschüttungsverwaltung</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #eef5fc; }
+    .container { width: 90%; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 8px; border-bottom: 1px solid #ddd; }
+    th { background: #4a8fcf; color: white; }
+    .green { color: green; }
+    .red { color: red; }
+    select, button { padding: 6px; margin: 5px 0; }
+  </style>
 </head>
 <body>
 <div class="container">
   <h2>Ausschüttungsverwaltung</h2>
-  <table>
+  Gesellschaft:
+  <select id="komplementaer">
+    <option value="">--Auswählen--</option>
+  </select>
+  <button onclick="exportCSV()">Export CSV</button>
+  <table id="table">
     <thead>
-      <tr>
-        <th>Jahr</th>
-        <th>Ausschüttung (Soll)</th>
-        <th>Ausschüttung (tatsächlich)</th>
-        <th>Auszahlung (Datum)</th>
-        <th></th>
-      </tr>
+      <tr><th>Jahr</th><th>Geplant (%)</th><th>Ist (%)</th><th>Auszahlung</th><th>Δ</th></tr>
     </thead>
-    <tbody id="daten"></tbody>
+    <tbody id="data"></tbody>
+    <tfoot><tr><td>Summe</td><td id="sumSoll">0</td><td id="sumIst">0</td><td colspan="2"></td></tr></tfoot>
   </table>
 </div>
 <script>
-fetch('/api/ausschuettungen').then(r=>r.json()).then(data=>{
-  const tbody=document.getElementById('daten');
-  data.forEach(r=>{
-    const tr=document.createElement('tr');
-    ['Jahr','AusschuettungSoll','Ausschuettung','Auszahlung'].forEach(f=>{
-      const td=document.createElement('td');
-      const inp=document.createElement('input');
-      inp.value=r[f]??'';
-      td.appendChild(inp);
-      tr.appendChild(td);
-    });
-    const tdBtn=document.createElement('td');
-    const btn=document.createElement('button');
-    btn.textContent='Speichern';
-    btn.onclick=async()=>{
-      btn.disabled=true;
-      const inputs=tr.querySelectorAll('input');
-      const payload={
-        ID:r.ID,
-        AusschuettungSoll:inputs[1].value,
-        Ausschuettung:inputs[2].value,
-        Auszahlung:inputs[3].value
-      };
-      const resp=await fetch('/api/update_ausschuettung',{
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
-      });
-      const result=await resp.json();
-      btn.disabled=false;
-      alert(result.status==='success'?'Gespeichert!':'Fehler: '+result.error);
-    };
-    tdBtn.appendChild(btn); tr.appendChild(tdBtn); tbody.appendChild(tr);
+  const sel = document.getElementById('komplementaer');
+  fetch('/api/komplementaere').then(r=>r.json()).then(d=> {
+    d.forEach(k=> sel.innerHTML+=`<option>${k}</option>`);
   });
-});
+
+  sel.onchange=()=>{
+    fetch('/api/ausschuettungen/'+sel.value).then(r=>r.json()).then(d=> {
+      let html='', sumSoll=0, sumIst=0;
+      d.forEach(i=>{
+        const diff=i.Ausschuettung-i.AusschuettungSoll;
+        sumSoll+=i.AusschuettungSoll;
+        sumIst+=i.Ausschuettung;
+        const farbe=diff>=0?'green':'red';
+        html+=`<tr>
+          <td>${i.Jahr}</td>
+          <td>${i.AusschuettungSoll}</td>
+          <td>${i.Ausschuettung}</td>
+          <td>${new Date(i.Auszahlung).toLocaleDateString('de-DE')}</td>
+          <td class="${farbe}">${diff}</td>
+        </tr>`;
+      });
+      document.getElementById('data').innerHTML=html;
+      document.getElementById('sumSoll').innerText=sumSoll;
+      document.getElementById('sumIst').innerText=sumIst;
+    });
+  };
+
+  function exportCSV(){
+    const rows=[["Jahr","Geplant","Ist","Auszahlung","Differenz"]];
+    document.querySelectorAll("#data tr").forEach(tr=>{
+      const row=[];
+      tr.querySelectorAll("td").forEach(td=>row.push(td.innerText));
+      rows.push(row);
+    });
+    let csv=rows.map(e=>e.join(";")).join("\n");
+    let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+    let url=URL.createObjectURL(blob);
+    let a=document.createElement("a");
+    a.href=url;
+    a.download="ausschuettungen.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
 </script>
 </body>
 </html>
