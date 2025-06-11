@@ -1,0 +1,69 @@
+<!-- Datei: standort_betriebsdaten.html -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>kWh EVU – Standort-Erfassung</title>
+    <style>
+        body { background:#eef2fb; font-family:Segoe UI,sans-serif;}
+        .container { max-width:430px; margin:60px auto; background:rgba(255,255,255,0.85); border-radius:24px; box-shadow:0 8px 32px 0 rgba(31,38,135,.17);padding:2em;}
+        h1 { text-align:center; color:#243571;}
+        label { font-weight:bold; color:#435099;}
+        select,input,button {width:100%;padding:.5em;margin-bottom:1em;border-radius:10px;border:none;background:rgba(240,240,255,0.7);}
+        button { background:#728eea; color:#fff;font-weight:bold; cursor:pointer; }
+        button:hover { background:#4f71c7;}
+        .msg{margin-top:1em;text-align:center;}
+        .success{color:#1d872a;}
+        .error{color:#d12b40;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Betriebsdaten: kWh EVU</h1>
+        <form id="form-standort">
+            <label>Standort</label>
+            <select id="standort"></select>
+            <label>Jahr</label>
+            <select id="jahr"></select>
+            <label>Monat</label>
+            <select id="monat"></select>
+            <label>kWh EVU</label>
+            <input id="kwh_evu" type="number" step="any" min="0" required>
+            <button type="submit">Speichern</button>
+        </form>
+        <div id="msg" class="msg"></div>
+    </div>
+    <script>
+    async function fetchOpts(api, sel, txtKey) {
+        const d = await fetch(api).then(r=>r.json());
+        sel.innerHTML = ""; d.forEach(v=>{
+            const o=document.createElement("option");
+            o.value=v[Object.keys(v)[0]]; o.textContent=txtKey?v[txtKey]:v[Object.keys(v)[1]]; sel.appendChild(o);
+        });
+    }
+    async function vorbefuellen() {
+        const standort = standortSel.value, jahr = jahrSel.value, monat = monatSel.value;
+        if (!standort||!jahr||!monat) return;
+        const res = await fetch(`/api/standort_betriebsdaten?standort_id=${standort}&jahr_id=${jahr}&monat_id=${monat}`).then(r=>r.json());
+        kwhEVU.value = res?.kWh_EVU ?? "";
+        msgDiv.textContent = "";
+    }
+    const standortSel = document.getElementById('standort'), jahrSel=document.getElementById('jahr'), monatSel=document.getElementById('monat'), kwhEVU=document.getElementById('kwh_evu'), msgDiv=document.getElementById('msg');
+    (async()=>{
+        await fetchOpts('/api/standorte', standortSel, "Bezeichnung");
+        await fetchOpts('/api/jahre', jahrSel, "Jahr");
+        await fetchOpts('/api/monate', monatSel, "Monat");
+        standortSel.onchange = jahrSel.onchange = monatSel.onchange = vorbefuellen;
+        vorbefuellen();
+    })();
+    document.getElementById('form-standort').onsubmit=async(e)=>{
+        e.preventDefault();
+        const body = { StandortID: standortSel.value, JahrID: jahrSel.value, MonatID: monatSel.value, kWh_EVU: kwhEVU.value };
+        const resp = await fetch('/api/standort_betriebsdaten', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const res = await resp.json();
+        msgDiv.textContent = res.status==="success" ? "Gespeichert!" : "Fehler: "+(res.error||"");
+        msgDiv.className = "msg "+(res.status==="success" ? "success" : "error");
+    }
+    </script>
+</body>
+</html>
