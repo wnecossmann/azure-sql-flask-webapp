@@ -129,6 +129,57 @@ def aussch_by_komplementaer(komplementaer):
 def personen_html():
     return send_from_directory(app.static_folder, 'person.html')
 
+@app.route('/api/weas')
+def get_weas():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT WEAID, Bezeichnung FROM WEA ORDER BY Bezeichnung")
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
 
+@app.route('/api/betriebsdaten/<int:wea_id>')
+def get_betriebsdaten(wea_id):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT BetriebsdatenID, Datum, Ertrag_kWh, Betriebsstunden, Stoerung
+        FROM WEA_Betriebsdaten
+        WHERE WEAID=?
+        ORDER BY Datum DESC
+    """, (wea_id,))
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+@app.route('/api/betriebsdaten', methods=['POST'])
+def post_betriebsdaten():
+    data = request.get_json()
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO WEA_Betriebsdaten (WEAID, Datum, Ertrag_kWh, Betriebsstunden, Stoerung)
+        VALUES (?, ?, ?, ?, ?)
+    """, (data['WEAID'], data['Datum'], data['Ertrag_kWh'], data['Betriebsstunden'], data['Stoerung']))
+    conn.commit()
+    return jsonify({'status': 'success'})
+
+
+@app.route('/api/fonds')
+def fonds_list():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT f.FondsID, f.Name, f.Kurz, f.Inbetriebnahme, f.Investitionsvolumen, k.Name AS Komplementär
+        FROM Fonds f
+        LEFT JOIN Fonds_Komplementär fk ON f.FondsID = fk.FondsID
+        LEFT JOIN Komplementär k ON fk.KomplementärID = k.KomplementärID
+        ORDER BY f.Name
+    """)
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+@app.route('/betriebsdaten')
+def betriebsdaten_html():
+    return send_from_directory(app.static_folder, 'betriebsdaten.html')
+
+@app.route('/fonds')
+def fonds_html():
+    return send_from_directory(app.static_folder, 'fonds.html')
 if __name__ == '__main__':
     app.run(debug=True)
