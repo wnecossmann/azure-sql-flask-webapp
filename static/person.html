@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Personenverwaltung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: #f0f8ff;
+        padding: 20px;
+        margin: 0;
+      }
+      .glass {
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        border-radius: 12px;
+        padding: 20px;
+        max-width: 1200px;
+        margin: auto;
+      }
+      h2 {
+        text-align: center;
+        color: #333;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        padding: 10px;
+        text-align: left;
+      }
+      th {
+        background: rgba(0, 123, 255, 0.6);
+        color: white;
+        border-radius: 6px;
+      }
+      tr {
+        transition: background 0.3s;
+      }
+      tr:hover {
+        background: rgba(0,123,255,0.1);
+      }
+      @media (max-width: 600px) {
+        th, td { display: block; }
+        tr { margin-bottom: 15px; border-bottom: 2px solid #ddd; }
+      }
+    </style>
+</head>
+<body>
+<div class="glass">
+  <h2>Personenverwaltung</h2>
+  <input type="text" id="suche" placeholder="Nachname suchen...">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Vorname</th>
+        <th>Geburtstag</th>
+        <th>Beruf</th>
+        <th>Mail</th>
+        <th>Telefon</th>
+        <th>Straße</th>
+        <th>PLZ</th>
+        <th>Ort</th>
+      </tr>
+    </thead>
+    <tbody id="daten"></tbody>
+  </table>
+</div>
+<script>
+fetch('/api/daten').then(res => res.json()).then(data => {
+  const tbody = document.getElementById('daten');
+  const render = (filter='') => {
+    tbody.innerHTML = '';
+    data.filter(p => p.Name.toLowerCase().includes(filter.toLowerCase()))
+      .forEach(p => {
+        tbody.innerHTML += `<tr>
+          <td>${p.Name}</td>
+          <td>${p.Vorname}</td>
+          <td>${new Date(p.Geburtstag).toLocaleDateString('de-DE')}</td>
+          <td>${p.Beruf || ''}</td>
+          <td>${p.Mail || ''}</td>
+          <td>${p.Telefon || ''}</td>
+          <td>${p.Straße || ''}</td>
+          <td>${p.PLZ || ''}</td>
+          <td>${p.Ort || ''}</td>
+        </tr>`;
+      });
+  };
+  document.getElementById('suche').oninput = (e) => render(e.target.value);
+  render();
+});
+</script>
+</body>
+</html>
