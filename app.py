@@ -182,42 +182,6 @@ def betriebsdaten_html():
 def fonds_html():
     return send_from_directory(app.static_folder, 'fonds.html')
 
-@app.route('/api/weas')
-def get_weas():
-    conn = get_conn()
-    cursor = conn.cursor()
-    cursor.execute("SELECT WEAID, Bezeichnung FROM dbo_WEA ORDER BY Bezeichnung")
-    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
-
-@app.route('/api/betriebsdaten/<int:jahr>/<monat>')
-def get_betriebsdaten(jahr, monat):
-    conn = get_conn()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT bd.BetriebsdatenID, w.Bez, bd.Jahr, bd.Monat, bd.AnlagenMessung, bd.geichteteMessung,
-               bd.Verfuegbarkeit, bd.Windmittel, bd.Bemerkungen
-        FROM dbo_WEA_Betriebsdaten bd
-        INNER JOIN dbo_WEA w ON bd.WEAID = w.WEAID
-        WHERE bd.Jahr=? AND bd.Monat=?
-        ORDER BY w.Bez
-    """, (jahr, monat))
-    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
-
-@app.route('/api/betriebsdaten', methods=['POST'])
-def post_betriebsdaten():
-    data = request.get_json()
-    conn = get_conn()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO dbo_WEA_Betriebsdaten
-            (WEAID, Jahr, Monat, AnlagenMessung, geichteteMessung, Verfuegbarkeit, Windmittel, Bemerkungen)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        data['WEAID'], data['Jahr'], data['Monat'], data['AnlagenMessung'], data['geichteteMessung'],
-        data['Verfuegbarkeit'], data['Windmittel'], data['Bemerkungen']
-    ))
-    conn.commit()
-    return jsonify({'status': 'success'})
 
 if __name__ == '__main__':
     app.run(debug=True)
