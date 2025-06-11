@@ -1,0 +1,52 @@
+<!-- fonds.html -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fondsverwaltung</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #e9edf5; margin: 0;}
+    .card { max-width: 900px; margin: 2em auto; background: rgba(255,255,255,0.85); box-shadow: 0 8px 24px #b2bedf30; border-radius: 20px; padding: 2em; }
+    h2 { font-size: 2rem; text-align: center; letter-spacing: .01em; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1em;}
+    th, td { padding: .5em 1em; }
+    th { background: #5376e6; color: white; }
+    tr:nth-child(even) { background: #f4f7fc; }
+    @media (max-width: 900px) {
+      .card, table, th, td { font-size: 0.96em; padding: .4em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Fondsverwaltung</h2>
+    <table id="fondsTabelle">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Kurz</th>
+          <th>Inbetriebnahme</th>
+          <th>Volumen</th>
+          <th>Komplementär</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+<script>
+async function ladeFonds() {
+  let res = await fetch('/api/fonds'); let daten = await res.json();
+  let tbody = document.querySelector('#fondsTabelle tbody');
+  tbody.innerHTML = daten.map(row =>
+    `<tr>
+      <td>${row.Name || ''}</td>
+      <td>${row.Kurz || ''}</td>
+      <td>${row.Inbetriebnahme ? new Date(row.Inbetriebnahme).toLocaleDateString('de-DE') : ''}</td>
+      <td>${row.Investitionsvolumen ? parseFloat(row.Investitionsvolumen).toLocaleString('de-DE') : ''}</td>
+      <td>${row.Komplementär || ''}</td>
+    </tr>`).join('');
+}
+ladeFonds();
+</script>
+</body>
+</html>
