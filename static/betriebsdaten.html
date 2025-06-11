@@ -1,133 +1,307 @@
-<!-- betriebsdaten.html -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <title>Betriebsdatenerfassung</title>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #e9edf5; margin: 0; }
-    .card { max-width: 1200px; margin: 2em auto; background: rgba(255,255,255,0.9); box-shadow: 0 8px 24px #b2bedf30; border-radius: 20px; padding: 2em;}
-    h2 { font-size: 2rem; text-align: center; }
-    label, select, input { font-size: 1em; }
-    form { display: flex; gap: 1em; flex-wrap: wrap; margin-bottom: 2em; align-items: center;}
-    input, select { border: 1px solid #b2bedf; border-radius: 8px; padding: .3em .8em; background: #f9faff;}
-    button { border: none; background: #5376e6; color: white; border-radius: 8px; padding: .5em 1.2em; cursor: pointer; font-weight: 600;}
-    table { width: 100%; border-collapse: collapse; margin-top: 1em;}
-    th, td { padding: .4em .6em; }
-    th { background: #5376e6; color: white; }
-    tr:nth-child(even) { background: #f4f7fc; }
-    .summe { font-weight: bold; background: #d8e4ff;}
-    @media (max-width: 1000px) {
-      .card, table, th, td { font-size: 0.95em; padding: .2em; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Betriebsdatenerfassung</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #e7edf6 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        .glass-card {
+            background: rgba(255,255,255,0.75);
+            box-shadow: 0 8px 32px rgba(80,100,175,0.10);
+            border-radius: 20px;
+            margin: 40px auto;
+            padding: 32px 24px 24px 24px;
+            max-width: 1200px;
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(105,124,210,0.12);
+        }
+        h2 {
+            text-align: center;
+            color: #1d3557;
+            letter-spacing: 1px;
+        }
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        select, button, input[type="text"] {
+            border: 1px solid #c3d2fa;
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 1em;
+            background: rgba(250,250,255,0.6);
+            transition: box-shadow 0.2s;
+            outline: none;
+        }
+        select:focus, input[type="text"]:focus {
+            box-shadow: 0 0 0 2px #7eb6ff55;
+        }
+        button {
+            cursor: pointer;
+            background: linear-gradient(90deg,#6fa3ef 0,#4761b4 100%);
+            color: #fff;
+            font-weight: 600;
+            border: none;
+            margin-left: 10px;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            background: linear-gradient(90deg,#4f6db2 0,#376099 100%);
+            box-shadow: 0 2px 8px #b4c6ec45;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.7);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        th, td {
+            padding: 10px 6px;
+            text-align: left;
+            border-bottom: 1px solid #d4e0fc55;
+        }
+        th {
+            background: rgba(103,132,198,0.90);
+            color: #fff;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        tr:nth-child(even) { background: rgba(225,234,255,0.4); }
+        tr.editing { background: #e7f0fd !important; }
+        .edit-btn, .save-btn {
+            padding: 4px 12px;
+            font-size: 0.98em;
+            border-radius: 7px;
+            border: none;
+            margin-right: 2px;
+        }
+        .edit-btn {
+            background: #5bbd72;
+            color: #fff;
+        }
+        .edit-btn:hover {
+            background: #36a852;
+        }
+        .save-btn {
+            background: #1976d2;
+            color: #fff;
+        }
+        .save-btn:hover {
+            background: #124e91;
+        }
+        .cancel-btn {
+            background: #eaa356;
+            color: #fff;
+        }
+        .cancel-btn:hover {
+            background: #cc8631;
+        }
+        @media (max-width: 900px) {
+            .glass-card { padding: 16px 4px; }
+            table, th, td { font-size: 0.95em; }
+            .filters { gap: 8px; flex-direction: column; align-items: stretch; }
+        }
+        .success-msg {
+            text-align: center;
+            color: #1976d2;
+            font-weight: 500;
+            margin-top: 6px;
+            margin-bottom: -6px;
+            opacity: 0;
+            transition: opacity .6s;
+        }
+        .success-msg.visible { opacity: 1; }
+    </style>
 </head>
 <body>
-  <div class="card">
+<div class="glass-card">
     <h2>Betriebsdatenerfassung</h2>
-    <form id="filterForm">
-      <label for="jahr">Jahr:</label>
-      <input type="number" id="jahr" min="2000" max="2100" value="2025">
-      <label for="monat">Monat:</label>
-      <select id="monat">
-        <option>März</option>
-        <option>Januar</option>
-        <option>Februar</option>
-        <option>April</option>
-        <option>Mai</option>
-        <option>Juni</option>
-        <option>Juli</option>
-        <option>August</option>
-        <option>September</option>
-        <option>Oktober</option>
-        <option>November</option>
-        <option>Dezember</option>
-      </select>
-      <button type="button" onclick="ladeTabelle()">Anzeigen</button>
-    </form>
-    <form id="bdeForm">
-      <select id="weaSel"></select>
-      <input type="number" id="anlagenMessung" placeholder="Anlagenmessung" required>
-      <input type="number" id="geichteteMessung" placeholder="Geichtete Messung" required>
-      <input type="number" id="verfuegbarkeit" step="0.001" min="0" max="1" placeholder="Verfügbarkeit" required>
-      <input type="number" id="windmittel" step="0.01" placeholder="Windmittel" required>
-      <input type="text" id="bemerkungen" placeholder="Bemerkungen">
-      <button>Speichern</button>
-    </form>
-    <table id="bdTabelle">
-      <thead>
-        <tr>
-          <th>Anlage</th>
-          <th>Jahr</th>
-          <th>Monat</th>
-          <th>Anlagenmessung</th>
-          <th>Geichtete Messung</th>
-          <th>Verfügbarkeit</th>
-          <th>Windmittel</th>
-          <th>Bemerkungen</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-      <tfoot>
-        <tr class="summe">
-          <td colspan="3">Summe</td>
-          <td id="sumAnlagen"></td>
-          <td id="sumGeichtete"></td>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
+    <div class="filters">
+        <select id="filter-standort"></select>
+        <select id="filter-jahr"></select>
+        <select id="filter-monat"></select>
+        <input id="filter-search" type="text" placeholder="Suche in Bemerkungen...">
+        <button onclick="exportTableToCSV()">Export CSV</button>
+    </div>
+    <div class="success-msg" id="msgbox"></div>
+    <div style="overflow-x:auto">
+        <table id="bdeTable">
+            <thead>
+            <tr>
+                <th>Standort</th>
+                <th>Jahr</th>
+                <th>Monat</th>
+                <th>kWh (EVU)</th>
+                <th>Stromeigenverbrauch</th>
+                <th>Windmittel</th>
+                <th>Grundvergütung</th>
+                <th>SDL-Bonus</th>
+                <th>Erfolg DV (€)</th>
+                <th>Bemerkungen</th>
+                <th>Aktion</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
 <script>
-async function ladeWEAs() {
-  let res = await fetch('/api/weas'); let weas = await res.json();
-  let sel = document.getElementById('weaSel');
-  sel.innerHTML = weas.map(w => `<option value="${w.WEAID}">${w.Bez || w.Bezeichnung}</option>`).join('');
+let allData = [];
+let filteredData = [];
+let standorte = new Set();
+let jahre = new Set();
+let monate = new Set();
+
+function fetchData() {
+    fetch('/api/betriebsdaten')
+        .then(r => r.json())
+        .then(data => {
+            allData = data;
+            data.forEach(row => {
+                standorte.add(row.Standort);
+                jahre.add(row.Jahr);
+                monate.add(row.Monat);
+            });
+            fillFilter('filter-standort', Array.from(standorte).sort());
+            fillFilter('filter-jahr', Array.from(jahre).sort((a, b) => b - a));
+            fillFilter('filter-monat', Array.from(monate).sort((a, b) => {
+                // Monatsnamen korrekt sortieren (optional, abhängig von Datenbank)
+                const m = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+                return m.indexOf(a) - m.indexOf(b);
+            }));
+            applyFilters();
+        });
 }
-async function ladeTabelle() {
-  let jahr = document.getElementById('jahr').value;
-  let monat = document.getElementById('monat').value;
-  let res = await fetch(`/api/betriebsdaten/${jahr}/${monat}`); let daten = await res.json();
-  let tbody = document.querySelector('#bdTabelle tbody');
-  let sumAnlagen = 0, sumGeichtete = 0;
-  tbody.innerHTML = daten.map(row => {
-    sumAnlagen += Number(row.AnlagenMessung || 0);
-    sumGeichtete += Number(row.geichteteMessung || 0);
-    return `<tr>
-      <td>${row.Bez || ''}</td>
-      <td>${row.Jahr || ''}</td>
-      <td>${row.Monat || ''}</td>
-      <td>${row.AnlagenMessung ? row.AnlagenMessung.toLocaleString('de-DE') : ''}</td>
-      <td>${row.geichteteMessung ? row.geichteteMessung.toLocaleString('de-DE') : ''}</td>
-      <td>${row.Verfuegbarkeit ? row.Verfuegbarkeit.toLocaleString('de-DE', {minimumFractionDigits:3}) : ''}</td>
-      <td>${row.Windmittel ? row.Windmittel.toLocaleString('de-DE', {minimumFractionDigits:1}) : ''}</td>
-      <td>${row.Bemerkungen || ''}</td>
+function fillFilter(id, arr) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">Alle</option>` + arr.map(val => `<option>${val}</option>`).join('');
+}
+function applyFilters() {
+    let s = document.getElementById('filter-standort').value;
+    let j = document.getElementById('filter-jahr').value;
+    let m = document.getElementById('filter-monat').value;
+    let txt = document.getElementById('filter-search').value.trim().toLowerCase();
+    filteredData = allData.filter(row =>
+        (!s || row.Standort === s)
+        && (!j || String(row.Jahr) === String(j))
+        && (!m || row.Monat === m)
+        && (!txt || (row.Bemerkungen||"").toLowerCase().includes(txt))
+    );
+    renderTable();
+}
+function renderTable() {
+    let tbody = document.querySelector('#bdeTable tbody');
+    tbody.innerHTML = filteredData.map((row, i) => rowToHTML(row, i)).join('');
+}
+function rowToHTML(row, idx) {
+    return `<tr id="row${idx}">
+        <td>${row.Standort}</td>
+        <td>${row.Jahr}</td>
+        <td>${row.Monat}</td>
+        <td>${fmt(row.KWh_EVU)}</td>
+        <td>${fmt(row.Stromeigenverbrauch)}</td>
+        <td>${fmt(row.Windmittel)}</td>
+        <td>${fmt(row.Grundvergütung)}</td>
+        <td>${fmt(row.SDLBonus)}</td>
+        <td>${fmt(row.Kosten_Erlös_DV_Euro)}</td>
+        <td>${row.Bemerkungen || ""}</td>
+        <td>
+            <button class="edit-btn" onclick="editRow(${idx})">Bearbeiten</button>
+        </td>
     </tr>`;
-  }).join('');
-  document.getElementById('sumAnlagen').textContent = sumAnlagen.toLocaleString('de-DE');
-  document.getElementById('sumGeichtete').textContent = sumGeichtete.toLocaleString('de-DE');
 }
-document.getElementById('bdeForm').onsubmit = async e => {
-  e.preventDefault();
-  let jahr = document.getElementById('jahr').value;
-  let monat = document.getElementById('monat').value;
-  let body = {
-    WEAID: document.getElementById('weaSel').value,
-    Jahr: jahr,
-    Monat: monat,
-    AnlagenMessung: document.getElementById('anlagenMessung').value,
-    geichteteMessung: document.getElementById('geichteteMessung').value,
-    Verfuegbarkeit: document.getElementById('verfuegbarkeit').value,
-    Windmittel: document.getElementById('windmittel').value,
-    Bemerkungen: document.getElementById('bemerkungen').value
-  };
-  await fetch('/api/betriebsdaten', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  ladeTabelle();
-};
-ladeWEAs();
-ladeTabelle();
+function fmt(val) {
+    if (val === null || val === undefined) return '';
+    if (typeof val === "number") return val.toLocaleString("de-DE");
+    return val;
+}
+function editRow(idx) {
+    let row = filteredData[idx];
+    let tr = document.getElementById('row'+idx);
+    tr.classList.add("editing");
+    tr.innerHTML = `
+        <td>${row.Standort}</td>
+        <td>${row.Jahr}</td>
+        <td>${row.Monat}</td>
+        <td><input value="${row.KWh_EVU||''}" size="8"></td>
+        <td><input value="${row.Stromeigenverbrauch||''}" size="5"></td>
+        <td><input value="${row.Windmittel||''}" size="4"></td>
+        <td><input value="${row.Grundvergütung||''}" size="6"></td>
+        <td><input value="${row.SDLBonus||''}" size="5"></td>
+        <td><input value="${row.Kosten_Erlös_DV_Euro||''}" size="7"></td>
+        <td><input value="${row.Bemerkungen||''}" size="12"></td>
+        <td>
+            <button class="save-btn" onclick="saveRow(${idx})">Speichern</button>
+            <button class="cancel-btn" onclick="renderTable()">Abbrechen</button>
+        </td>`;
+}
+function saveRow(idx) {
+    let tr = document.getElementById('row'+idx);
+    let inputs = tr.querySelectorAll("input");
+    let payload = {
+        Standort_BetriebsdatenID: filteredData[idx].Standort_BetriebsdatenID,
+        KWh_EVU: inputs[0].value,
+        Stromeigenverbrauch: inputs[1].value,
+        Windmittel: inputs[2].value,
+        Grundvergütung: inputs[3].value,
+        SDLBonus: inputs[4].value,
+        Kosten_Erlös_DV_Euro: inputs[5].value,
+        Bemerkungen: inputs[6].value
+    };
+    fetch('/api/update_betriebsdaten', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+    })
+    .then(r=>r.json())
+    .then(res=>{
+        if(res.status === "success") {
+            Object.assign(filteredData[idx], payload);
+            showMsg("Erfolgreich gespeichert");
+            renderTable();
+        } else {
+            showMsg("Fehler: "+(res.error||""), true);
+        }
+    })
+}
+function showMsg(msg, error) {
+    let box = document.getElementById('msgbox');
+    box.textContent = msg;
+    box.style.color = error ? "#e63b4a" : "#1976d2";
+    box.classList.add("visible");
+    setTimeout(()=>box.classList.remove("visible"), 2200);
+}
+function exportTableToCSV() {
+    let csv = "Standort;Jahr;Monat;kWh (EVU);Stromeigenverbrauch;Windmittel;Grundvergütung;SDL-Bonus;Erfolg DV (€);Bemerkungen\n";
+    filteredData.forEach(row=>{
+        csv += [row.Standort,row.Jahr,row.Monat,row.KWh_EVU,row.Stromeigenverbrauch,row.Windmittel,row.Grundvergütung,row.SDLBonus,row.Kosten_Erlös_DV_Euro,row.Bemerkungen||""].map(s=>'"'+String(s||"").replace(/"/g,'""')+'"').join(";")+"\n";
+    });
+    let blob = new Blob([csv], {type:'text/csv'});
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "betriebsdaten.csv";
+    a.click();
+}
+
+// Filterevents:
+document.addEventListener('DOMContentLoaded', ()=>{
+    fetchData();
+    document.querySelectorAll('#filter-standort,#filter-jahr,#filter-monat').forEach(sel => sel.onchange = applyFilters);
+    document.getElementById('filter-search').oninput = applyFilters;
+});
 </script>
 </body>
 </html>
