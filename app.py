@@ -115,7 +115,7 @@ def aussch_by_komplementaer(komplementaer):
         FROM Fonds_Ausschuettung fa
         INNER JOIN Jahr j ON fa.JahrID = j.JahrID
         INNER JOIN Fonds f ON fa.FondsID = f.FondsID
-        INNER JOIN [Fonds Komplementär] fk ON f.FondsID = fk.FondsID
+        INNER JOIN Fonds_Komplementär fk ON f.FondsID = fk.FondsID
         INNER JOIN Komplementär k ON fk.KomplementärID = k.KomplementärID
         WHERE k.Name=?
         ORDER BY j.Jahr DESC
@@ -124,6 +124,7 @@ def aussch_by_komplementaer(komplementaer):
     rows = cursor.fetchall()
     result = [dict(zip(columns, row)) for row in rows]
     return jsonify(result)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
