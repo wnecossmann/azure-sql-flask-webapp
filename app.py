@@ -230,6 +230,105 @@ def update_betriebsdaten():
     except Exception as e:
         return jsonify({'status':'error', 'error':str(e)}), 400
 
+# --- Hilfs-APIs für Auswahlfelder ---
+@app.route('/api/standorte')
+def standorte():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT StandortID, Bezeichnung FROM Standort ORDER BY Bezeichnung")
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+@app.route('/api/jahre')
+def jahre():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT JahrID, Jahr FROM Jahr ORDER BY Jahr DESC")
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+@app.route('/api/monate')
+def monate():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT MonatID, Monat FROM Monat ORDER BY MonatID")
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+@app.route('/api/weas/<int:standort_id>')
+def weas_by_standort(standort_id):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT w.WEAID, w.Bezeichnung 
+        FROM WEA w
+        INNER JOIN WEA_Standort ws ON ws.WEAID = w.WEAID
+        WHERE ws.StandortID = ?
+        ORDER BY w.Bezeichnung
+    """, (standort_id,))
+    return jsonify([dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()])
+
+# --- BDEWEA: Daten anzeigen & speichern ---
+@app.route('/api/bdewea', methods=['GET'])
+def bdewea_get():
+    standort_id = request.args.get('standort_id')
+    jahr_id = request.args.get('jahr_id')
+    monat_id = request.args.get('monat_id')
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT b.BDEID, w.WEAID, w.Bezeichnung AS WEA, b.AnlagenMessung, b.geeichteMessung, b.Verfügbarkeit, b.Windmittel, b.Bemerkungen
+        FROM BDEWEA b
+        INNER JOIN WEA w ON w.WEAID = b.WEAID
+        INNER JOIN WEA_Standort ws ON ws.WEAID = w.WEAID
+        WHERE ws.StandortID = ? AND b.JahrID = ? AND b.MonatID = ?
+        ORDER BY w.Bezeichnung
+    """, (standort_id, jahr_id, monat_id))
+    columns = [c[0] for c in cursor.description]
+    return jsonify([dict(zip(columns, row)) for row in cursor.fetchall()])
+
+@app.route('/api/bdewea', methods=['POST'])
+def bdewea_save():
+    data = request.get_json()
+    conn = get_conn()
+    cursor = conn.cursor()
+    # Prüfen, ob schon Datensatz für (WEA, Jahr, Monat) existiert → UPDATE sonst INSERT
+    cursor.execute("""
+        SELECT BDEID FROM BDEWEA WHERE WEAID=? AND JahrID=? AND MonatID=?
+    """, (data['WEAID'], data['JahrID'], data['MonatID']))
+    row = cursor.fetchone()
+    if row:
+        # Update
+        cursor.execute("""
+            UPDATE BDEWEA SET AnlagenMessung=?, geeichteMessung=?, Verfügbarkeit=?, Windmittel=?, Bemerkungen=?
+            WHERE BDEID=?
+        """, (
+            data.get('AnlagenMessung'),
+            data.get('geeichteMessung'),
+            data.get('Verfügbarkeit'),
+            data.get('Windmittel'),
+            data.get('Bemerkungen'),
+            row[0]
+        ))
+    else:
+        # Insert
+        cursor.execute("""
+            INSERT INTO BDEWEA (WEAID, JahrID, MonatID, AnlagenMessung, geeichteMessung, Verfügbarkeit, Windmittel, Bemerkungen)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data['WEAID'],
+            data['JahrID'],
+            data['MonatID'],
+            data.get('AnlagenMessung'),
+            data.get('geeichteMessung'),
+            data.get('Verfügbarkeit'),
+            data.get('Windmittel'),
+            data.get('Bemerkungen'),
+        ))
+    conn.commit()
+    return jsonify({'status': 'success'})
+
+# --- Beispiel: HTML ausliefern (einfaches Frontend) ---
+@app.route('/bdewea')
+def bdewea_html():
+    return send_from_directory(app.static_folder, 'bdewea.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
