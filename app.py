@@ -160,6 +160,34 @@ def post_betriebsdaten():
     conn.commit()
     return jsonify({'status': 'success'})
 
+@app.route('/api/betriebsdaten')
+def get_betriebsdaten_all():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT 
+            s.Bezeichnung AS Standort,
+            j.Jahr,
+            m.Monat,
+            b.KWh_EVU,
+            b.Stromeigenverbrauch,
+            b.Windmittel,
+            b.Grundvergütung,
+            b.SDLBonus,
+            b.Kosten_Erlös_DV_Euro,
+            b.Bemerkungen,
+            b.Standort_BetriebsdatenID
+        FROM Standort_Betriebsdaten b
+        INNER JOIN Standort s ON b.StandortID = s.StandortID
+        INNER JOIN Jahr j ON b.JahrID = j.JahrID
+        INNER JOIN Monat m ON b.MonatID = m.MonatID
+        ORDER BY s.Bezeichnung, j.Jahr DESC, m.MonatID DESC
+    """)
+    columns = [col[0] for col in cursor.description]
+    rows = cursor.fetchall()
+    result = [dict(zip(columns, row)) for row in rows]
+    return jsonify(result)
+
 
 @app.route('/api/fonds')
 def fonds_list():
